@@ -25,6 +25,7 @@ import modeling
 import optimization
 import tokenization
 import tensorflow as tf
+import json
 
 flags = tf.flags
 
@@ -250,6 +251,58 @@ class XnliProcessor(DataProcessor):
   def get_labels(self):
     """See base class."""
     return ["contradiction", "entailment", "neutral"]
+
+
+class ExpenseReaderProcessor(DataProcessor):
+  """Processor for the MultiNLI data set (GLUE version)."""
+
+  def get_train_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+      self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+  def get_dev_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+      self._read_tsv(os.path.join(data_dir, "dev.tsv")),
+      "dev_matched")
+
+  def get_test_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+      self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+  def get_labels(self, data_dir):
+    """See base class."""
+    # return [
+    #   "World",
+    #   "Entertainment",
+    #   "Sports",
+    #   "Business",
+    # ]
+
+    with open(os.path.join(data_dir, "countries.json")) as _file:
+      return json.load(_file)
+
+  def _create_examples(self, lines, set_type):
+    """Creates examples for the training and dev sets."""
+    examples = []
+    for (i, line) in enumerate(lines):
+      if i == 0:  # for header
+        continue
+      single_example = self._create_example(line, set_type)
+      examples.append(single_example)
+    return examples
+
+  def _create_example(self, line, set_type):
+    guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
+    text_a = tokenization.convert_to_unicode(line[1])
+    if set_type == "test":
+      label = "World"
+    else:
+      label = tokenization.convert_to_unicode(line[-1])
+    single_example = InputExample(guid=guid, text_a=text_a, label=label)
+    return single_example
 
 
 class MnliProcessor(DataProcessor):
